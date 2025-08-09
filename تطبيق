@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>مواقيت الصلاة</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #0f1724; color: #fff; margin: 0; padding: 0; }
+  .container { max-width: 480px; margin: auto; padding: 15px; }
+  h1 { text-align: center; }
+  .times { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+  .time { background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; text-align: center; }
+  #location { text-align: center; margin-top: 10px; font-size: 18px; }
+  #errorMsg { color: #ff6b6b; margin-top: 15px; text-align: center; }
+  button { margin-top: 20px; width: 100%; padding: 10px; border: none; border-radius: 8px; background: #f97316; color: white; font-weight: bold; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>مواقيت الصلاة</h1>
+  <div id="location">جارٍ تحميل البيانات...</div>
+  <div class="times" id="timesGrid"></div>
+  <div id="errorMsg"></div>
+  <button id="btnSettings">تغيير الدولة والمدينة</button>
+</div>
+
+<script>
+const API_BASE = 'https://api.aladhan.com/v1';
+const TEHRAN_METHOD_ID = 8;
+
+const locationDiv = document.getElementById('location');
+const timesGrid = document.getElementById('timesGrid');
+const errorMsg = document.getElementById('errorMsg');
+const btnSettings = document.getElementById('btnSettings');
+
+btnSettings.addEventListener('click', () => {
+  // الانتقال إلى صفحة الإعدادات
+  window.location.href = 'settings.html';
+});
+
+function renderTimes(timings) {
+  timesGrid.innerHTML = '';
+  const order = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+  const names = {Fajr: 'الفجر', Sunrise: 'الشروق', Dhuhr: 'الظهر', Asr: 'العصر', Maghrib: 'المغرب', Isha: 'العشاء'};
+  order.forEach(key => {
+    const div = document.createElement('div');
+    div.className = 'time';
+    div.innerHTML = `<strong>${names[key]}</strong><div>${timings[key]}</div>`;
+    timesGrid.appendChild(div);
+  });
+}
+
+async function fetchPrayerTimes(countryEn, cityEn, countryAr, cityAr) {
+  try {
+    errorMsg.textContent = '';
+    locationDiv.textContent = `جاري جلب أوقات الصلاة لـ ${cityAr}, ${countryAr} ...`;
+    const url = `${API_BASE}/timingsByCity?city=${encodeURIComponent(cityEn)}&country=${encodeURIComponent(countryEn)}&method=${TEHRAN_METHOD_ID}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.code === 200) {
+      renderTimes(data.data.timings);
+      locationDiv.textContent = `${cityAr}, ${countryAr}`;
+    } else {
+      errorMsg.textContent = 'تعذر جلب أوقات الصلاة.';
+      locationDiv.textContent = '';
+      timesGrid.innerHTML = '';
+    }
+  } catch (err) {
+    errorMsg.textContent = 'حدث خطأ في الاتصال.';
+    locationDiv.textContent = '';
+    timesGrid.innerHTML = '';
+  }
+}
+
+window.addEventListener('load', () => {
+  const countryEn = localStorage.getItem('countryEn');
+  const cityEn = localStorage.getItem('cityEn');
+  const countryAr = localStorage.getItem('countryAr');
+  const cityAr = localStorage.getItem('cityAr');
+
+  if (countryEn && cityEn && countryAr && cityAr) {
+    fetchPrayerTimes(countryEn, cityEn, countryAr, cityAr);
+  } else {
+    // إذا لم توجد بيانات مخزنة، توجه للإعدادات
+    window.location.href = 'settings.html';
+  }
+});
+</script>
+
+</body>
+</html>
+
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>إعدادات مواقيت الصلاة</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #0f1724; color: #fff; margin: 0; padding: 0; }
+  .container { max-width: 480px; margin: auto; padding: 15px; }
+  h1 { text-align: center; margin-bottom: 20px; }
+  label { display: block; margin-top: 10px; font-weight: bold; }
+  select, button { width: 100%; padding: 10px; margin-top: 5px; border-radius: 8px; border: none; }
+  button { background: #f97316; color: white; font-weight: bold; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>إعدادات مواقيت الصلاة</h1>
+
+  <label for="countrySelect">اختر الدولة:</label>
+  <select id="countrySelect"></select>
+
+  <label for="citySelect">اختر المدينة:</label>
+  <select id="citySelect"></select>
+
+  <button id="saveBtn">حفظ</button>
+</div>
+
+<script>
+const countriesCities = {
+  "العراق": [
+    { ar: "بغداد", en: "Baghdad" },
+    { ar: "البصرة", en: "Basrah" },
+    { ar: "الموصل", en: "Mosul" },
+    { ar: "أربيل", en: "Erbil" }
+  ],
+  "مصر": [
+    { ar: "القاهرة", en: "Cairo" },
+    { ar: "الإسكندرية", en: "Alexandria" },
+    { ar: "الجيزة", en: "Giza" }
+  ],
+  "السعودية": [
+    { ar: "الرياض", en: "Riyadh" },
+    { ar: "جدة", en: "Jeddah" },
+    { ar: "مكة", en: "Mecca" },
+    { ar: "المدينة المنورة", en: "Medina" }
+  ],
+  "إيران": [
+    { ar: "طهران", en: "Tehran" },
+    { ar: "مشهد", en: "Mashhad" },
+    { ar: "أصفهان", en: "Isfahan" }
+  ]
+};
+
+const countryNamesEn = {
+  "العراق": "Iraq",
+  "مصر": "Egypt",
+  "السعودية": "Saudi Arabia",
+  "إيران": "Iran"
+};
+
+const countrySelect = document.getElementById('countrySelect');
+const citySelect = document.getElementById('citySelect');
+const saveBtn = document.getElementById('saveBtn');
+
+function loadCountryList() {
+  countrySelect.innerHTML = '';
+  Object.keys(countriesCities).forEach(country => {
+    const option = document.createElement('option');
+    option.value = country;
+    option.textContent = country;
+    countrySelect.appendChild(option);
+  });
+  loadCityList(countrySelect.value);
+}
+
+function loadCityList(country) {
+  citySelect.innerHTML = '';
+  countriesCities[country].forEach(city => {
+    const option = document.createElement('option');
+    option.value = city.en;
+    option.textContent = city.ar;
+    citySelect.appendChild(option);
+  });
+}
+
+countrySelect.addEventListener('change', () => {
+  loadCityList(countrySelect.value);
+});
+
+saveBtn.addEventListener('click', () => {
+  const countryAr = countrySelect.value;
+  const cityAr = citySelect.options[citySelect.selectedIndex].text;
+  const countryEn = countryNamesEn[countryAr];
+  const cityEn = citySelect.value;
+
+  if (!countryAr || !cityAr) {
+    alert('يرجى اختيار الدولة والمدينة.');
+    return;
+  }
+
+  localStorage.setItem('countryAr', countryAr);
+  localStorage.setItem('cityAr', cityAr);
+  localStorage.setItem('countryEn', countryEn);
+  localStorage.setItem('cityEn', cityEn);
+
+  // العودة إلى صفحة مواقيت الصلاة
+  window.location.href = 'index.html';
+});
+
+// تحميل القوائم عند بدء الصفحة
+window.addEventListener('load', () => {
+  loadCountryList();
+
+  // استرجاع الإعدادات السابقة إذا وجدت
+  const savedCountryAr = localStorage.getItem('countryAr');
+  const savedCityEn = localStorage.getItem('cityEn');
+
+  if (savedCountryAr && savedCityEn) {
+    countrySelect.value = savedCountryAr;
+    loadCityList(savedCountryAr);
+    citySelect.value = savedCityEn;
+  }
+});
+</script>
+
+</body>
+</html>
